@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAVOX JR - POS & ERP v4.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        @media print {
+            body * { visibility: hidden !important; }
+            #print-area, #print-area * { visibility: visible !important; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+            .no-print { display: none !important; }
+            @page { size: A4 portrait; margin: 0mm; }
+            .a4-page { width: 210mm; min-height: 297mm; padding: 8mm; margin: 0 auto; background: white; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col bg-slate-900 text-slate-800">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 -translate-y-20 opacity-0 pointer-events-none">
+        <div class="flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-white font-bold bg-slate-800 border-l-4 border-amber-500">
+            <i class="fas fa-circle-check text-amber-500 text-lg"></i>
+            <span id="toast-msg">Message</span>
+        </div>
+    </div>
+
+    <!-- ÉCRAN DE CONNEXION / INSCRIPTION -->
+    <div id="v-auth" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <div class="inline-flex items-center justify-center p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-2">
+                    <i class="fas fa-cash-register text-amber-500 text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-black tracking-wider text-white">MAVOX <span class="text-amber-500">JR</span> POS</h1>
+                <p class="text-xs font-semibold text-slate-400">Logiciel de Gestion Commerciale & de Caisse</p>
+            </div>
+
+            <!-- TAB SWITCH -->
+            <div class="flex p-1 bg-slate-800/80 rounded-2xl">
+                <button type="button" id="tab-login-btn" onclick="switchAuthTab('login')" class="flex-1 py-2 text-xs font-bold rounded-xl text-white bg-slate-700 shadow">Connexion</button>
+                <button type="button" id="tab-register-btn" onclick="switchAuthTab('register')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-400 hover:text-white">Créer un compte</button>
+            </div>
+
+            <!-- FORMULAIRE CONNEXION -->
+            <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1.5">Identifiant / Nom d'utilisateur</label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+                        <input type="text" id="login-username" required class="w-full pl-9 pr-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-white outline-none focus:border-amber-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1.5">Mot de passe</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+                        <input type="password" id="login-password" required class="w-full pl-9 pr-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-white outline-none focus:border-amber-500">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 font-black text-xs text-white rounded-xl uppercase tracking-wider shadow-lg transition">Se Connecter</button>
+            </form>
+
+            <!-- FORMULAIRE INSCRIPTION -->
+            <form id="form-register" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1.5">Nom complet</label>
+                    <input type="text" id="reg-fullname" required class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-white outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1.5">Identifiant de connexion</label>
+                    <input type="text" id="reg-username" required class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-white outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1.5">Mot de passe</label>
+                    <input type="password" id="reg-password" required class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-white outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1.5">Type de Compte (Rôle)</label>
+                    <select id="reg-role" class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-amber-400 outline-none focus:border-amber-500">
+                        <option value="caissiere">Caissière (Ventes uniquement)</option>
+                        <option value="admin">Administrateur (Accès total)</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 font-black text-xs text-white rounded-xl uppercase tracking-wider shadow-lg transition">Créer le Compte</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APPLICATION PRINCIPALE -->
+    <div id="app" class="h-full flex flex-col hidden">
+        <!-- HEADER -->
+        <header class="bg-slate-900 text-white px-6 py-2.5 flex items-center justify-between shrink-0 border-b border-slate-800">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-3">
+                    <img src="Logo.jpeg" alt="Logo" class="h-8 object-contain" onerror="this.style.display='none'">
+                    <span class="font-black text-xl text-white tracking-wider">MAVOX <span class="text-amber-500">JR</span> <span class="bg-blue-600 text-[10px] px-1.5 py-0.5 rounded ml-1">v4.0</span></span>
+                </div>
+                <nav class="flex items-center gap-1">
+                    <button id="btn-v-pos" onclick="showView('pos')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500 text-white"><i class="fas fa-cash-register mr-1"></i> Caisse / POS</button>
+                    <button id="btn-v-stock" onclick="showView('stock')" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800"><i class="fas fa-boxes-stacked mr-1"></i> Stocks & Articles</button>
+                    <button id="btn-v-clients" onclick="showView('clients')" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800"><i class="fas fa-users mr-1"></i> Clients & Fiscalité</button>
+                    <button id="btn-v-quotes" onclick="showView('quotes')" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800"><i class="fas fa-file-signature mr-1"></i> Devis / Pro Forma</button>
+                    <button id="btn-v-history" onclick="showView('history')" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800"><i class="fas fa-file-invoice mr-1"></i> Historique Ventes</button>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="admin-tools" class="hidden flex gap-1">
+                    <button type="button" onclick="exportBackupJSON()" title="Sauvegarder la Base de Données" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700"><i class="fas fa-download mr-1 text-emerald-400"></i> Backup</button>
+                    <label title="Restaurer la Base de Données" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 cursor-pointer">
+                        <i class="fas fa-upload mr-1 text-amber-400"></i> Restauration
+                        <input type="file" id="import-json" onchange="importBackupJSON(event)" accept=".json" class="hidden">
+                    </label>
+                </div>
+                <div class="text-right border-l border-slate-800 pl-4">
+                    <div id="user-fullname-display" class="text-xs font-black text-slate-100">Utilisateur</div>
+                    <div id="user-role-display" class="text-[10px] font-bold text-amber-400 uppercase">Rôle</div>
+                </div>
+                <button type="button" onclick="logout()" class="p-2 bg-slate-800 hover:bg-red-600/20 text-slate-300 hover:text-red-500 rounded-xl transition" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-hidden relative bg-slate-200">
+            <!-- VUE CAISSE / POS -->
+            <div id="v-pos" class="h-full grid grid-cols-12 gap-3 p-3">
+                <div class="col-span-7 h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-300 p-4 overflow-hidden">
+                    <div class="flex gap-2 mb-3">
+                        <div class="relative flex-1">
+                            <i class="fas fa-barcode absolute left-3 top-2.5 text-slate-400"></i>
+                            <input type="text" id="barcode-input" onkeydown="handleBarcodeScan(event)" placeholder="Scanner Code-Barres / Douchette..." class="w-full pl-9 pr-3 py-2 bg-amber-50 border-2 border-amber-400 rounded-xl text-xs font-bold text-slate-900 outline-none">
+                        </div>
+                        <input type="text" id="pos-search" oninput="drawPOS()" placeholder="Recherche nom ou réf..." class="w-1/2 px-3 py-2 bg-slate-100 border border-slate-300 rounded-xl text-xs font-medium outline-none">
+                    </div>
+                    <div class="flex-1 overflow-y-auto">
+                        <div id="pos-grid" class="grid grid-cols-2 gap-3"></div>
+                    </div>
+                </div>
+
+                <div class="col-span-5 h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-300 p-4 overflow-hidden justify-between">
+                    <div>
+                        <div class="flex justify-between items-center pb-3 border-b border-slate-200 mb-3">
+                            <h3 class="text-sm font-black text-slate-800 uppercase"><i class="fas fa-cart-shopping text-red-500 mr-1"></i> Panier de Vente</h3>
+                            <select id="cart-client-select" class="bg-slate-100 border border-slate-300 rounded-xl px-2 py-1 text-xs font-bold text-slate-800 outline-none">
+                                <option value="Client Comptant">Client Comptant</option>
+                            </select>
+                        </div>
+                        <div class="max-h-[250px] overflow-y-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-600 font-black uppercase">
+                                        <th class="p-2">ARTICLE</th>
+                                        <th class="p-2 text-right">P.U</th>
+                                        <th class="p-2 text-center">QTÉ</th>
+                                        <th class="p-2 text-right">TOTAL</th>
+                                        <th class="p-2 text-center">X</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cart-body" class="divide-y font-semibold"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800 text-white rounded-2xl p-4 space-y-2.5 shrink-0">
+                        <div class="flex justify-between text-xs font-bold text-slate-300"><span>Sous-Total HT :</span><span id="txt-subtotal">0 FCFA</span></div>
+                        <div class="flex justify-between items-center text-xs font-bold">
+                            <span>Remise Spéciale (FCFA) :</span>
+                            <input type="number" id="cart-discount" value="0" oninput="drawCart()" class="w-24 bg-white text-slate-900 border rounded-lg px-2 py-0.5 text-right font-black text-xs">
+                        </div>
+                        <div class="flex justify-between items-center text-base font-black border-t border-slate-700 pt-2">
+                            <span>NET À PAYER :</span>
+                            <span id="txt-net" class="text-amber-500">0 FCFA</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <button type="button" onclick="saveQuote()" class="py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold text-xs uppercase"><i class="fas fa-file-signature mr-1"></i> Générer Devis</button>
+                            <button type="button" onclick="openPayModal()" class="py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs uppercase shadow-lg">Encaisser Vente</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VUE STOCKS -->
+            <div id="v-stock" class="hidden h-full p-6 overflow-y-auto">
+                <div class="max-w-7xl mx-auto space-y-4">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-300">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-800 uppercase">Catalogue & Stocks</h2>
+                            <p class="text-xs text-slate-500 font-semibold">Gérez les prix, stocks et seuils d'alerte critique</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="exportStockCSV()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow uppercase"><i class="fas fa-file-excel mr-1"></i> Export Excel/CSV</button>
+                            <button type="button" onclick="openProdModal()" class="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white font-black text-xs rounded-xl shadow uppercase"><i class="fas fa-plus mr-1"></i> Nouveau Produit</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 font-black uppercase border-b">
+                                    <th class="p-3">CODE-BARRES</th>
+                                    <th class="p-3">RÉF</th>
+                                    <th class="p-3">DÉSIGNATION</th>
+                                    <th class="p-3 text-right">P. ACHAT</th>
+                                    <th class="p-3 text-right">P. VENTE</th>
+                                    <th class="p-3 text-center">STOCK</th>
+                                    <th class="p-3 text-center">STATUT STOCK</th>
+                                    <th class="p-3 text-center">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock-body" class="divide-y font-medium"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VUE CLIENTS -->
+            <div id="v-clients" class="hidden h-full p-6 overflow-y-auto">
+                <div class="max-w-7xl mx-auto space-y-4">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-300">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-800 uppercase">Gestion des Clients & Fiche Fiscale</h2>
+                            <p class="text-xs text-slate-500 font-semibold">Répertoire client avec Rue, Téléphone, Adresse, Code Postal, RCCM, Division Fiscale et IFU</p>
+                        </div>
+                        <button type="button" onclick="openClientModal()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow uppercase"><i class="fas fa-user-plus mr-1"></i> Nouveau Client</button>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 font-black uppercase border-b">
+                                    <th class="p-3">NOM / RAISON SOCIALE</th>
+                                    <th class="p-3">CONTACTS & ADRESSE</th>
+                                    <th class="p-3">IFU / RCCM</th>
+                                    <th class="p-3">DIV. FISCALE & RUE</th>
+                                    <th class="p-3 text-right">DETTE</th>
+                                    <th class="p-3 text-center">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-body" class="divide-y font-medium"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VUE DEVIS / PRO FORMA -->
+            <div id="v-quotes" class="hidden h-full p-6 overflow-y-auto">
+                <div class="max-w-7xl mx-auto space-y-4">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-300 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-800 uppercase">Gestion des Devis & Pro Forma</h2>
+                            <p class="text-xs text-slate-500 font-semibold">Transformez un devis validé en facture et déduisez le stock en 1 clic</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 font-black uppercase border-b">
+                                    <th class="p-3">N° DEVIS</th>
+                                    <th class="p-3">DATE</th>
+                                    <th class="p-3">CLIENT</th>
+                                    <th class="p-3 text-right">MONTANT TOTAL</th>
+                                    <th class="p-3 text-center">STATUT</th>
+                                    <th class="p-3 text-center">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quotes-body" class="divide-y font-semibold"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VUE HISTORIQUE -->
+            <div id="v-history" class="hidden h-full p-6 overflow-y-auto">
+                <div class="max-w-7xl mx-auto space-y-4">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-300 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-800 uppercase">Historique Ventes</h2>
+                            <p id="history-subtitle" class="text-xs text-slate-500 font-semibold">Toutes les transactions</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <button type="button" onclick="exportSalesCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow uppercase"><i class="fas fa-file-excel mr-1"></i> Export Ventes CSV</button>
+                            <div id="history-ca" class="text-2xl font-black text-amber-500">0 FCFA</div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 font-black uppercase border-b">
+                                    <th class="p-3">N° FACTURE</th>
+                                    <th class="p-3">DATE</th>
+                                    <th class="p-3">AGENT / CAISSIÈRE</th>
+                                    <th class="p-3">CLIENT</th>
+                                    <th class="p-3">MODE PAIEMENT</th>
+                                    <th class="p-3">STATUT</th>
+                                    <th class="p-3 text-right">MONTANT TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-body" class="divide-y font-semibold"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL PAIEMENT, CHOIX MODE PAIEMENT & CRÉDIT -->
+    <div id="m-pay" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 p-5 space-y-4">
+            <h3 class="font-black text-sm uppercase text-slate-900 border-b pb-2">Règlement & Encaissement</h3>
+            
+            <!-- SELECTION DU MODE DE PAIEMENT -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mode de Paiement :</label>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button type="button" onclick="setPayMethod('Espèces')" id="pm-Espèces" class="pay-method-btn py-2 px-2 text-center rounded-xl font-bold text-xs bg-emerald-600 text-white shadow">Espèces</button>
+                    <button type="button" onclick="setPayMethod('Orange Money')" id="pm-Orange Money" class="pay-method-btn py-2 px-2 text-center rounded-xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200">Orange Money</button>
+                    <button type="button" onclick="setPayMethod('Moov Money')" id="pm-Moov Money" class="pay-method-btn py-2 px-2 text-center rounded-xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200">Moov Money</button>
+                    <button type="button" onclick="setPayMethod('Carte / Chèque')" id="pm-Carte / Chèque" class="pay-method-btn py-2 px-2 text-center rounded-xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200">Carte/Chèque</button>
+                    <button type="button" onclick="setPayMethod('Virement')" id="pm-Virement" class="pay-method-btn py-2 px-2 text-center rounded-xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200">Virement</button>
+                    <button type="button" onclick="setPayMethod('Crédit Total')" id="pm-Crédit Total" class="pay-method-btn py-2 px-2 text-center rounded-xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200">Crédit Total</button>
+                </div>
+            </div>
+
+            <div class="space-y-3 pt-1">
+                <div class="flex justify-between items-center text-xs font-bold text-slate-700">
+                    <span>Total Net à Payer :</span>
+                    <span id="pay-modal-net" class="text-base font-black text-red-600">0 FCFA</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Montant Versé / Acompte (FCFA)</label>
+                    <input type="number" id="pay-given" oninput="calcPaymentFields()" class="w-full px-3 py-2 border-2 border-emerald-500 rounded-xl text-sm font-black text-right outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2 bg-slate-100 p-3 rounded-xl text-xs font-bold">
+                    <div>
+                        <span class="text-slate-500 block">Monnaie à Rendre :</span>
+                        <span id="pay-change" class="text-emerald-700 font-black text-sm">0 FCFA</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-slate-500 block">Reste dû (Crédit) :</span>
+                        <span id="pay-debt" class="text-red-600 font-black text-sm">0 FCFA</span>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button type="button" onclick="checkout('a4')" class="py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase shadow"><i class="fas fa-file-pdf mr-1"></i> Facture A4</button>
+                <button type="button" onclick="checkout('ticket')" class="py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-black text-xs uppercase shadow"><i class="fas fa-receipt text-amber-500 mr-1"></i> Ticket 80mm</button>
+            </div>
+            <button type="button" onclick="closePayModal()" class="w-full py-2 bg-slate-100 font-bold text-xs text-slate-600 rounded-xl">Annuler</button>
+        </div>
+    </div>
+
+    <!-- MODAL CLIENT -->
+    <div id="m-client" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 p-5 space-y-3">
+            <h3 class="font-black text-sm uppercase text-slate-900 border-b pb-2">Nouveau Client & Fiche Fiscale</h3>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nom / Raison Sociale *</label>
+                    <input type="text" id="c-name" class="w-full px-3 py-1.5 border rounded-xl text-xs font-semibold outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Téléphone *</label>
+                    <input type="text" id="c-phone" class="w-full px-3 py-1.5 border rounded-xl text-xs font-semibold outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Rue</label>
+                    <input type="text" id="c-street" class="w-full px-3 py-1.5 border rounded-xl text-xs font-semibold outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Adresse</label>
+                    <input type="text" id="c-address" class="w-full px-3 py-1.5 border rounded-xl text-xs font-semibold outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Code Postal</label>
+                    <input type="text" id="c-zip" class="w-full px-3 py-1.5 border rounded-xl text-xs font-semibold outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">IFU</label>
+                    <input type="text" id="c-ifu" class="w-full px-3 py-1.5 border rounded-xl text-xs font-bold text-blue-600 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">RCCM</label>
+                    <input type="text" id="c-rccm" class="w-full px-3 py-1.5 border rounded-xl text-xs font-semibold outline-none">
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Division Fiscale</label>
+                    <input type="text" id="c-taxdiv" class="w-full px-3 py-1.5 border rounded-xl text-xs font-semibold outline-none">
+                </div>
+            </div>
+            <div class="pt-2 flex justify-end gap-2 border-t">
+                <button type="button" onclick="closeClientModal()" class="px-4 py-2 bg-slate-100 font-bold text-xs text-slate-600 rounded-xl">Annuler</button>
+                <button type="button" onclick="saveClient()" class="px-5 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl">Enregistrer Client</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PRODUIT -->
+    <div id="m-prod" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 p-5 space-y-3">
+            <h3 id="m-prod-title" class="font-black text-sm uppercase text-slate-900 border-b pb-2">Nouveau Produit</h3>
+            <input type="hidden" id="p-id">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Code-Barres</label>
+                <input type="text" id="p-barcode" class="w-full px-3 py-2 border rounded-xl text-xs font-bold text-blue-600">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Référence</label>
+                    <input type="text" id="p-ref" class="w-full px-3 py-2 border rounded-xl text-xs font-semibold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Désignation</label>
+                    <input type="text" id="p-name" class="w-full px-3 py-2 border rounded-xl text-xs font-semibold">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Prix d'Achat</label>
+                    <input type="number" id="p-buy" class="w-full px-3 py-2 border rounded-xl text-xs font-semibold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Prix de Vente</label>
+                    <input type="number" id="p-sell" class="w-full px-3 py-2 border rounded-xl text-xs font-semibold">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Stock Actuel</label>
+                    <input type="number" id="p-stock" class="w-full px-3 py-2 border rounded-xl text-xs font-semibold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Seuil Alerte Stock</label>
+                    <input type="number" id="p-alert" value="5" class="w-full px-3 py-2 border rounded-xl text-xs font-bold text-red-600">
+                </div>
+            </div>
+            <div class="pt-2 flex justify-end gap-2">
+                <button type="button" onclick="closeProdModal()" class="px-4 py-2 bg-slate-100 font-bold text-xs text-slate-600 rounded-xl">Annuler</button>
+                <button type="button" onclick="saveProd()" class="px-5 py-2 bg-amber-500 text-white font-bold text-xs rounded-xl">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-area" class="print-area hidden"></div>
+
+    <script>
+        let users = JSON.parse(localStorage.getItem('mavox_users')) || [
+            { username: 'admin', fullname: 'Administrateur Principal', password: 'admin', role: 'admin' }
+        ];
+        let currentUser = null;
+        let selectedPayMethod = 'Espèces';
+
+        let items = JSON.parse(localStorage.getItem('mavox_items')) || [
+            { id: '1', barcode: '600123456789', ref: 'PLM-001', name: 'Tuyau PVC Ø 100mm (4m)', buy: 3500, sell: 4800, stock: 40, alert: 5 },
+            { id: '2', barcode: '600987654321', ref: 'PLM-002', name: 'Robinet Mousseur Chromé', buy: 6000, sell: 8500, stock: 3, alert: 5 }
+        ];
+
+        let clients = JSON.parse(localStorage.getItem('mavox_clients')) || [
+            { id: 'c1', name: 'Client Comptant', phone: '-', street: '-', address: 'Ouagadougou', zip: '-', ifu: '-', rccm: '-', taxdiv: '-', debt: 0 },
+            { id: 'c2', name: 'SOCIETE BTP FASO SARL', phone: '+226 25 30 00 00', street: 'Rue 12.05', address: 'Koulouba', zip: '01 BP 500', ifu: '00098765432B', rccm: 'BF-OUA-01-2022-B14', taxdiv: 'DME Ouaga', debt: 125000 }
+        ];
+
+        let quotes = JSON.parse(localStorage.getItem('mavox_quotes')) || [];
+        let sales = JSON.parse(localStorage.getItem('mavox_sales')) || [];
+        let cart = [];
+
+        function saveState() {
+            localStorage.setItem('mavox_users', JSON.stringify(users));
+            localStorage.setItem('mavox_items', JSON.stringify(items));
+            localStorage.setItem('mavox_clients', JSON.stringify(clients));
+            localStorage.setItem('mavox_quotes', JSON.stringify(quotes));
+            localStorage.setItem('mavox_sales', JSON.stringify(sales));
+        }
+
+        function switchAuthTab(tab) {
+            const fLogin = document.getElementById('form-login');
+            const fReg = document.getElementById('form-register');
+            const bLogin = document.getElementById('tab-login-btn');
+            const bReg = document.getElementById('tab-register-btn');
+
+            if (tab === 'login') {
+                fLogin.classList.remove('hidden');
+                fReg.classList.add('hidden');
+                bLogin.className = "flex-1 py-2 text-xs font-bold rounded-xl text-white bg-slate-700 shadow";
+                bReg.className = "flex-1 py-2 text-xs font-bold rounded-xl text-slate-400 hover:text-white";
+            } else {
+                fLogin.classList.add('hidden');
+                fReg.classList.remove('hidden');
+                bReg.className = "flex-1 py-2 text-xs font-bold rounded-xl text-white bg-slate-700 shadow";
+                bLogin.className = "flex-1 py-2 text-xs font-bold rounded-xl text-slate-400 hover:text-white";
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value;
+
+            const user = users.find(x => x.username.toLowerCase() === u.toLowerCase() && x.password === p);
+            if (user) {
+                currentUser = user;
+                document.getElementById('v-auth').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+                setupUserPermissions();
+                notify("Connexion réussie ! Bienvenue " + currentUser.fullname);
+            } else {
+                notify("Identifiant ou mot de passe incorrect.");
+            }
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const fullname = document.getElementById('reg-fullname').value.trim();
+            const username = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const role = document.getElementById('reg-role').value;
+
+            if (users.some(x => x.username.toLowerCase() === username.toLowerCase())) {
+                notify("Nom d'utilisateur déjà existant.");
+                return;
+            }
+
+            const newUser = { username, fullname, password, role };
+            users.push(newUser);
+            saveState();
+
+            notify("Compte créé avec succès ! Connectez-vous.");
+            switchAuthTab('login');
+            document.getElementById('login-username').value = username;
+            document.getElementById('login-password').value = '';
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('app').classList.add('hidden');
+            document.getElementById('v-auth').classList.remove('hidden');
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            notify("Vous êtes déconnecté.");
+        }
+
+        function setupUserPermissions() {
+            document.getElementById('user-fullname-display').innerText = currentUser.fullname;
+            document.getElementById('user-role-display').innerText = currentUser.role === 'admin' ? 'Administrateur' : 'Caissière';
+
+            const btnStock = document.getElementById('btn-v-stock');
+            const btnClients = document.getElementById('btn-v-clients');
+            const adminTools = document.getElementById('admin-tools');
+
+            if (currentUser.role === 'caissiere') {
+                btnStock.classList.add('hidden');
+                btnClients.classList.add('hidden');
+                adminTools.classList.add('hidden');
+            } else {
+                btnStock.classList.remove('hidden');
+                btnClients.classList.remove('hidden');
+                adminTools.classList.remove('hidden');
+            }
+
+            showView('pos');
+            updateClientDropdown();
+        }
+
+        function showView(v) {
+            document.getElementById('v-pos').classList.add('hidden');
+            document.getElementById('v-stock').classList.add('hidden');
+            document.getElementById('v-clients').classList.add('hidden');
+            document.getElementById('v-quotes').classList.add('hidden');
+            document.getElementById('v-history').classList.add('hidden');
+
+            document.getElementById('btn-v-pos').className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800";
+            document.getElementById('btn-v-stock').className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800";
+            document.getElementById('btn-v-clients').className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800";
+            document.getElementById('btn-v-quotes').className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800";
+            document.getElementById('btn-v-history').className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800";
+
+            if (v === 'pos') {
+                document.getElementById('v-pos').classList.remove('hidden');
+                document.getElementById('btn-v-pos').className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500 text-white";
+                drawPOS();
+            } else if (v === 'stock' && currentUser.role === 'admin') {
+                document.getElementById('v-stock').classList.remove('hidden');
+                document.getElementById('btn-v-stock').className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500 text-white";
+                drawStock();
+            } else if (v === 'clients' && currentUser.role === 'admin') {
+                document.getElementById('v-clients').classList.remove('hidden');
+                document.getElementById('btn-v-clients').className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500 text-white";
+                drawClients();
+            } else if (v === 'quotes') {
+                document.getElementById('v-quotes').classList.remove('hidden');
+                document.getElementById('btn-v-quotes').className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500 text-white";
+                drawQuotes();
+            } else if (v === 'history') {
+                document.getElementById('v-history').classList.remove('hidden');
+                document.getElementById('btn-v-history').className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500 text-white";
+                drawHistory();
+            }
+        }
+
+        function handleBarcodeScan(e) {
+            if (e.key === 'Enter') {
+                const code = e.target.value.trim();
+                const prod = items.find(x => x.barcode === code || x.ref === code);
+                if (prod) { addToCart(prod.id); notify("Scanné : " + prod.name); }
+                else { notify("Article non trouvé !"); }
+                e.target.value = '';
+            }
+        }
+
+        function drawPOS() {
+            const grid = document.getElementById('pos-grid');
+            const q = document.getElementById('pos-search').value.toLowerCase();
+            grid.innerHTML = '';
+            items.filter(x => x.name.toLowerCase().includes(q) || x.ref.toLowerCase().includes(q) || x.barcode.includes(q)).forEach(x => {
+                const el = document.createElement('div');
+                el.onclick = function() { addToCart(x.id); };
+                const isLow = x.stock <= (x.alert || 5);
+                el.className = "bg-slate-50 p-3 rounded-xl border hover:border-blue-500 cursor-pointer shadow-sm flex flex-col justify-between " + (isLow ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200');
+                el.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-extrabold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">${x.ref}</span>
+                            <span class="text-[9px] font-bold text-slate-400"><i class="fas fa-barcode"></i> ${x.barcode || 'N/A'}</span>
+                        </div>
+                        <h4 class="font-bold text-xs text-slate-800 leading-snug mt-1.5">${x.name}</h4>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-slate-200 flex justify-between items-center">
+                        <span class="font-black text-amber-600 text-xs">${x.sell.toLocaleString('fr-FR')} F</span>
+                        <span class="text-[10px] font-bold ${isLow ? 'text-red-600 font-extrabold' : 'text-slate-500'}">Stk: ${x.stock}</span>
+                    </div>
+                `;
+                grid.appendChild(el);
+            });
+        }
+
+        function addToCart(id) {
+            const prod = items.find(x => x.id === id);
+            if (!prod || prod.stock <= 0) { notify("Stock épuisé !"); return; }
+            const c = cart.find(x => x.id === id);
+            if (c) {
+                if (c.qty + 1 > prod.stock) { notify("Stock max atteint !"); return; }
+                c.qty++;
+            } else {
+                cart.push({ id: prod.id, ref: prod.ref, name: prod.name, price: prod.sell, qty: 1 });
+            }
+            drawCart();
+        }
+
+        function changeQty(id, delta) {
+            const c = cart.find(x => x.id === id);
+            const prod = items.find(x => x.id === id);
+            if (!c) return;
+            if (delta > 0 && c.qty + delta > prod.stock) { notify("Stock insuffisant !"); return; }
+            c.qty += delta;
+            if (c.qty <= 0) cart = cart.filter(x => x.id !== id);
+            drawCart();
+        }
+
+        function drawCart() {
+            const tbody = document.getElementById('cart-body');
+            tbody.innerHTML = '';
+            let sub = 0;
+            cart.forEach(c => {
+                const tot = c.price * c.qty;
+                sub += tot;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2 font-bold text-slate-800">${c.name}</td>
+                    <td class="p-2 text-right font-bold">${c.price.toLocaleString('fr-FR')}</td>
+                    <td class="p-2 text-center">
+                        <button type="button" onclick="changeQty('${c.id}', -1)" class="px-1.5 bg-slate-200 rounded font-black">-</button>
+                        <span class="px-1 font-black">${c.qty}</span>
+                        <button type="button" onclick="changeQty('${c.id}', 1)" class="px-1.5 bg-slate-200 rounded font-black">+</button>
+                    </td>
+                    <td class="p-2 text-right font-black text-red-600">${tot.toLocaleString('fr-FR')}</td>
+                    <td class="p-2 text-center"><button type="button" onclick="changeQty('${c.id}', -999)" class="text-red-500 font-bold"><i class="fas fa-times"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const disc = parseFloat(document.getElementById('cart-discount').value) || 0;
+            const net = Math.max(0, sub - disc);
+            document.getElementById('txt-subtotal').innerText = sub.toLocaleString('fr-FR') + ' FCFA';
+            document.getElementById('txt-net').innerText = net.toLocaleString('fr-FR') + ' FCFA';
+        }
+
+        function setPayMethod(m) {
+            selectedPayMethod = m;
+            document.querySelectorAll('.pay-method-btn').forEach(btn => {
+                if (btn.id === 'pm-' + m) {
+                    btn.className = "pay-method-btn py-2 px-2 text-center rounded-xl font-bold text-xs bg-emerald-600 text-white shadow";
+                } else {
+                    btn.className = "pay-method-btn py-2 px-2 text-center rounded-xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200";
+                }
+            });
+
+            if (m === 'Crédit Total') {
+                document.getElementById('pay-given').value = 0;
+            } else {
+                const sub = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+                const disc = parseFloat(document.getElementById('cart-discount').value) || 0;
+                document.getElementById('pay-given').value = Math.max(0, sub - disc);
+            }
+            calcPaymentFields();
+        }
+
+        function openPayModal() {
+            if (cart.length === 0) { notify("Panier vide !"); return; }
+            const sub = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const disc = parseFloat(document.getElementById('cart-discount').value) || 0;
+            const net = Math.max(0, sub - disc);
+            document.getElementById('pay-modal-net').innerText = net.toLocaleString('fr-FR') + ' FCFA';
+            setPayMethod('Espèces');
+            document.getElementById('m-pay').classList.remove('hidden');
+        }
+        function closePayModal() { document.getElementById('m-pay').classList.add('hidden'); }
+
+        function calcPaymentFields() {
+            const sub = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const disc = parseFloat(document.getElementById('cart-discount').value) || 0;
+            const net = Math.max(0, sub - disc);
+            const given = parseFloat(document.getElementById('pay-given').value) || 0;
+            document.getElementById('pay-change').innerText = Math.max(0, given - net).toLocaleString('fr-FR') + ' FCFA';
+            document.getElementById('pay-debt').innerText = Math.max(0, net - given).toLocaleString('fr-FR') + ' FCFA';
+        }
+
+        function checkout(type) {
+            const sub = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const disc = parseFloat(document.getElementById('cart-discount').value) || 0;
+            const net = Math.max(0, sub - disc);
+            const given = parseFloat(document.getElementById('pay-given').value) || 0;
+            const debt = Math.max(0, net - given);
+            const clientName = document.getElementById('cart-client-select').value;
+            const cliObj = clients.find(c => c.name === clientName) || { name: clientName };
+
+            if (debt > 0 && cliObj.id) { cliObj.debt += debt; }
+
+            cart.forEach(c => {
+                const prod = items.find(x => x.id === c.id);
+                if (prod) prod.stock = Math.max(0, prod.stock - c.qty);
+            });
+
+            const sale = {
+                id: 'MAV-' + Math.floor(100000 + Math.random() * 900000),
+                date: new Date().toLocaleString('fr-FR'),
+                agent: currentUser.fullname,
+                agentUsername: currentUser.username,
+                payMethod: selectedPayMethod,
+                client: cliObj,
+                items: [...cart], sub: sub, disc: disc, net: net, given: given, debt: debt
+            };
+
+            sales.unshift(sale);
+            saveState();
+            closePayModal();
+
+            if (type === 'a4') printA4(sale);
+            else printTicket(sale);
+
+            cart = [];
+            drawCart(); drawPOS();
+            notify("Vente enregistrée avec succès !");
+        }
+
+        function saveQuote() {
+            if (cart.length === 0) { notify("Panier vide pour générer un devis !"); return; }
+            const sub = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const disc = parseFloat(document.getElementById('cart-discount').value) || 0;
+            const net = Math.max(0, sub - disc);
+            const clientName = document.getElementById('cart-client-select').value;
+            const cliObj = clients.find(c => c.name === clientName) || { name: clientName };
+
+            const quote = {
+                id: 'DEV-' + Math.floor(100000 + Math.random() * 900000),
+                date: new Date().toLocaleString('fr-FR'),
+                agent: currentUser.fullname,
+                client: cliObj,
+                items: [...cart], sub: sub, disc: disc, net: net, status: 'En Attente'
+            };
+
+            quotes.unshift(quote);
+            saveState();
+            printQuoteA4(quote);
+            cart = [];
+            drawCart();
+            notify("Devis Pro Forma généré avec succès !");
+        }
+
+        function convertQuoteToSale(quoteId) {
+            const q = quotes.find(x => x.id === quoteId);
+            if (!q || q.status === 'Converti') return;
+
+            let canConvert = true;
+            q.items.forEach(i => {
+                const prod = items.find(p => p.id === i.id);
+                if (!prod || prod.stock < i.qty) { canConvert = false; }
+            });
+
+            if (!canConvert) { notify("Stock insuffisant pour transformer ce devis !"); return; }
+
+            q.items.forEach(i => {
+                const prod = items.find(p => p.id === i.id);
+                if (prod) prod.stock -= i.qty;
+            });
+
+            const sale = {
+                id: 'MAV-' + Math.floor(100000 + Math.random() * 900000),
+                date: new Date().toLocaleString('fr-FR'),
+                agent: currentUser.fullname,
+                agentUsername: currentUser.username,
+                payMethod: 'Espèces',
+                client: q.client,
+                items: q.items, sub: q.sub, disc: q.disc, net: q.net, given: q.net, debt: 0
+            };
+
+            q.status = 'Converti';
+            sales.unshift(sale);
+            saveState();
+            drawQuotes();
+            notify("Devis converti en vente & Stock déduit !");
+            printA4(sale);
+        }
+
+        function printQuoteA4(q) {
+            const area = document.getElementById('print-area');
+            const c = q.client;
+            area.className = "print-area block";
+            area.innerHTML = `
+                <div class="a4-page flex flex-col justify-between">
+                    <div>
+                        <img src="entete.jpeg" class="w-full object-contain mb-4" onerror="this.style.display='none'">
+                        <div class="flex justify-between border-b pb-3 mb-4">
+                            <div>
+                                <h2 class="text-2xl font-black uppercase text-amber-600">DEVIS / PRO FORMA N° ${q.id}</h2>
+                                <p class="text-xs text-slate-500">${q.date}</p>
+                                <p class="text-xs font-bold text-slate-700 mt-1">Établi par : ${q.agent}</p>
+                            </div>
+                            <div class="text-right text-xs space-y-0.5">
+                                <span class="font-bold text-slate-400 uppercase">CLIENT :</span>
+                                <div class="font-black text-sm text-slate-900">${c.name}</div>
+                                ${c.phone && c.phone !== '-' ? `<div>Tél : <b>${c.phone}</b></div>` : ''}
+                                ${c.ifu && c.ifu !== '-' ? `<div class="text-blue-800 font-bold">IFU : ${c.ifu}</div>` : ''}
+                            </div>
+                        </div>
+                        <table class="w-full border text-xs mb-6">
+                            <thead>
+                                <tr class="bg-slate-800 text-white font-bold uppercase">
+                                    <th class="p-2 border">RÉF</th>
+                                    <th class="p-2 border">DÉSIGNATION</th>
+                                    <th class="p-2 border text-right">P.U</th>
+                                    <th class="p-2 border text-center">QTÉ</th>
+                                    <th class="p-2 border text-right">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody class="font-semibold">
+                                ${q.items.map(i => `
+                                    <tr>
+                                        <td class="p-2 border font-bold text-blue-800">${i.ref}</td>
+                                        <td class="p-2 border">${i.name}</td>
+                                        <td class="p-2 border text-right">${i.price.toLocaleString('fr-FR')}</td>
+                                        <td class="p-2 border text-center font-black">${i.qty}</td>
+                                        <td class="p-2 border text-right font-black">${(i.price * i.qty).toLocaleString('fr-FR')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <div class="flex justify-end text-xs mb-8">
+                            <div class="w-64 bg-slate-50 p-3 rounded-xl border space-y-1">
+                                <div class="flex justify-between font-bold"><span>Total HT :</span><span>${q.sub.toLocaleString('fr-FR')} FCFA</span></div>
+                                <div class="flex justify-between font-bold"><span>Remise :</span><span>${q.disc.toLocaleString('fr-FR')} FCFA</span></div>
+                                <div class="flex justify-between font-black text-sm text-amber-600 border-t pt-1"><span>TOTAL ESTIMÉ :</span><span>${q.net.toLocaleString('fr-FR')} FCFA</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <img src="pied de page.jpeg" class="w-full object-contain" onerror="this.src='PIED PAGE.JPG';">
+                    </div>
+                </div>
+            `;
+            setTimeout(function() { window.print(); area.className = "print-area hidden"; }, 300);
+        }
+
+        function printA4(s) {
+            const area = document.getElementById('print-area');
+            const c = s.client;
+            area.className = "print-area block";
+            area.innerHTML = `
+                <div class="a4-page flex flex-col justify-between">
+                    <div>
+                        <img src="entete.jpeg" class="w-full object-contain mb-4" onerror="this.style.display='none'">
+                        <div class="flex justify-between border-b pb-3 mb-4">
+                            <div>
+                                <h2 class="text-2xl font-black uppercase">FACTURE N° ${s.id}</h2>
+                                <p class="text-xs text-slate-500">${s.date}</p>
+                                <p class="text-xs font-bold text-slate-700 mt-1">Vendeur(se) : ${s.agent}</p>
+                                <p class="text-xs font-bold text-blue-800">Paiement : ${s.payMethod || 'Espèces'}</p>
+                            </div>
+                            <div class="text-right text-xs space-y-0.5">
+                                <span class="font-bold text-slate-400 uppercase">FACTURÉ À :</span>
+                                <div class="font-black text-sm text-slate-900">${c.name}</div>
+                                ${c.phone && c.phone !== '-' ? `<div>Tél : <b>${c.phone}</b></div>` : ''}
+                                ${c.street && c.street !== '-' ? `<div>Rue : ${c.street}</div>` : ''}
+                                ${c.address && c.address !== '-' ? `<div>Adresse : ${c.address}</div>` : ''}
+                                ${c.zip && c.zip !== '-' ? `<div>Code Postal : ${c.zip}</div>` : ''}
+                                ${c.ifu && c.ifu !== '-' ? `<div class="text-blue-800 font-bold">IFU : ${c.ifu}</div>` : ''}
+                                ${c.rccm && c.rccm !== '-' ? `<div>RCCM : ${c.rccm}</div>` : ''}
+                                ${c.taxdiv && c.taxdiv !== '-' ? `<div>Div. Fiscale : ${c.taxdiv}</div>` : ''}
+                            </div>
+                        </div>
+                        <table class="w-full border text-xs mb-6">
+                            <thead>
+                                <tr class="bg-slate-800 text-white font-bold uppercase">
+                                    <th class="p-2 border">RÉF</th>
+                                    <th class="p-2 border">DÉSIGNATION</th>
+                                    <th class="p-2 border text-right">P.U</th>
+                                    <th class="p-2 border text-center">QTÉ</th>
+                                    <th class="p-2 border text-right">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody class="font-semibold">
+                                ${s.items.map(i => `
+                                    <tr>
+                                        <td class="p-2 border font-bold text-blue-800">${i.ref}</td>
+                                        <td class="p-2 border">${i.name}</td>
+                                        <td class="p-2 border text-right">${i.price.toLocaleString('fr-FR')}</td>
+                                        <td class="p-2 border text-center font-black">${i.qty}</td>
+                                        <td class="p-2 border text-right font-black">${(i.price * i.qty).toLocaleString('fr-FR')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <div class="flex justify-end text-xs mb-8">
+                            <div class="w-64 bg-slate-50 p-3 rounded-xl border space-y-1">
+                                <div class="flex justify-between font-bold"><span>Total Net :</span><span>${s.net.toLocaleString('fr-FR')} FCFA</span></div>
+                                <div class="flex justify-between font-bold text-emerald-700"><span>Montant Versé :</span><span>${s.given.toLocaleString('fr-FR')} FCFA</span></div>
+                                ${s.debt > 0 ? `<div class="flex justify-between font-black text-red-600 border-t pt-1"><span>Reste Dû (Crédit) :</span><span>${s.debt.toLocaleString('fr-FR')} FCFA</span></div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <img src="pied de page.jpeg" class="w-full object-contain" onerror="this.src='PIED PAGE.JPG';">
+                    </div>
+                </div>
+            `;
+            setTimeout(function() { window.print(); area.className = "print-area hidden"; }, 300);
+        }
+
+        function printTicket(s) {
+            const area = document.getElementById('print-area');
+            const c = s.client;
+            area.className = "print-area block";
+            area.innerHTML = `
+                <div class="w-[72mm] mx-auto font-mono text-[11px]">
+                    <div class="text-center font-black uppercase mb-2 border-b pb-1">MAVOX JR</div>
+                    <div class="text-[10px] mb-2 border-b pb-1">
+                        <div>Facture: <b>${s.id}</b></div>
+                        <div>Agent: ${s.agent}</div>
+                        <div>Mode: ${s.payMethod || 'Espèces'}</div>
+                        <div>Client: ${c.name}</div>
+                        ${c.ifu && c.ifu !== '-' ? `<div>IFU: ${c.ifu}</div>` : ''}
+                    </div>
+                    <table class="w-full text-[10px] mb-2 border-b pb-1">
+                        ${s.items.map(i => `<tr><td>${i.name}</td><td class="text-center">${i.qty}</td><td class="text-right">${(i.price * i.qty).toLocaleString('fr-FR')}</td></tr>`).join('')}
+                    </table>
+                    <div class="text-right font-black text-xs">TOTAL: ${s.net.toLocaleString('fr-FR')} FCFA</div>
+                    <div class="text-right text-[10px]">VERSÉ: ${s.given.toLocaleString('fr-FR')} FCFA</div>
+                    ${s.debt > 0 ? `<div class="text-right font-bold text-red-600 text-[10px]">DETTE: ${s.debt.toLocaleString('fr-FR')} FCFA</div>` : ''}
+                </div>
+            `;
+            setTimeout(function() { window.print(); area.className = "print-area hidden"; }, 300);
+        }
+
+        function drawStock() {
+            const tbody = document.getElementById('stock-body');
+            tbody.innerHTML = '';
+            items.forEach(x => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50";
+                const isAlert = x.stock <= (x.alert || 5);
+                const isOut = x.stock <= 0;
+                tr.innerHTML = `
+                    <td class="p-3 font-mono font-bold text-blue-600">${x.barcode || '-'}</td>
+                    <td class="p-3 font-bold text-slate-600">${x.ref}</td>
+                    <td class="p-3 font-bold text-slate-800">${x.name}</td>
+                    <td class="p-3 text-right font-bold text-slate-600">${x.buy.toLocaleString('fr-FR')} F</td>
+                    <td class="p-3 text-right font-black text-slate-900">${x.sell.toLocaleString('fr-FR')} F</td>
+                    <td class="p-3 text-center font-bold text-sm">${x.stock}</td>
+                    <td class="p-3 text-center">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black ${isOut ? 'bg-red-100 text-red-700' : isAlert ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                            ${isOut ? 'Rupture' : isAlert ? 'Alerte Stock' : 'Disponible'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center space-x-1">
+                        <button type="button" onclick="editProd('${x.id}')" class="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-bold"><i class="fas fa-pen"></i></button>
+                        <button type="button" onclick="deleteProd('${x.id}')" class="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-bold"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openProdModal() {
+            document.getElementById('m-prod-title').innerText = "Nouveau Produit";
+            document.getElementById('p-id').value = '';
+            document.getElementById('p-barcode').value = '';
+            document.getElementById('p-ref').value = '';
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-buy').value = '';
+            document.getElementById('p-sell').value = '';
+            document.getElementById('p-stock').value = '';
+            document.getElementById('p-alert').value = '5';
+            document.getElementById('m-prod').classList.remove('hidden');
+        }
+        function closeProdModal() { document.getElementById('m-prod').classList.add('hidden'); }
+
+        function editProd(id) {
+            const x = items.find(p => p.id === id);
+            if (!x) return;
+            document.getElementById('m-prod-title').innerText = "Modifier Produit";
+            document.getElementById('p-id').value = x.id;
+            document.getElementById('p-barcode').value = x.barcode || '';
+            document.getElementById('p-ref').value = x.ref;
+            document.getElementById('p-name').value = x.name;
+            document.getElementById('p-buy').value = x.buy;
+            document.getElementById('p-sell').value = x.sell;
+            document.getElementById('p-stock').value = x.stock;
+            document.getElementById('p-alert').value = x.alert || 5;
+            document.getElementById('m-prod').classList.remove('hidden');
+        }
+
+        function saveProd() {
+            const id = document.getElementById('p-id').value;
+            const barcode = document.getElementById('p-barcode').value.trim();
+            const ref = document.getElementById('p-ref').value.trim();
+            const name = document.getElementById('p-name').value.trim();
+            const buy = parseFloat(document.getElementById('p-buy').value) || 0;
+            const sell = parseFloat(document.getElementById('p-sell').value) || 0;
+            const stock = parseInt(document.getElementById('p-stock').value) || 0;
+            const alert = parseInt(document.getElementById('p-alert').value) || 5;
+
+            if (!ref || !name) { notify("Remplissez au moins Référence et Nom."); return; }
+
+            if (id) {
+                const x = items.find(p => p.id === id);
+                if (x) { x.barcode = barcode; x.ref = ref; x.name = name; x.buy = buy; x.sell = sell; x.stock = stock; x.alert = alert; }
+            } else {
+                items.push({ id: Date.now().toString(), barcode, ref, name, buy, sell, stock, alert });
+            }
+
+            saveState(); closeProdModal(); drawStock(); drawPOS();
+            notify("Produit Enregistré !");
+        }
+
+        function deleteProd(id) {
+            items = items.filter(x => x.id !== id);
+            saveState(); drawStock(); drawPOS();
+            notify("Produit supprimé !");
+        }
+
+        function drawClients() {
+            const tbody = document.getElementById('clients-body');
+            tbody.innerHTML = '';
+            clients.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-800">${c.name}</td>
+                    <td class="p-3 font-semibold text-slate-600">${c.phone}<br><span class="text-[10px] text-slate-400">${c.address || ''} (${c.street || ''})</span></td>
+                    <td class="p-3 font-bold text-blue-800">${c.ifu || '-'}<br><span class="text-[10px] text-slate-500">${c.rccm || ''}</span></td>
+                    <td class="p-3 text-slate-600">${c.taxdiv || '-'}<br><span class="text-[10px] text-slate-400">Postal: ${c.zip || ''}</span></td>
+                    <td class="p-3 text-right font-black ${c.debt > 0 ? 'text-red-600' : 'text-emerald-600'}">${c.debt.toLocaleString('fr-FR')} F</td>
+                    <td class="p-3 text-center">
+                        ${c.debt > 0 ? `<button type="button" onclick="payDebt('${c.id}')" class="px-2 py-1 bg-emerald-600 text-white rounded font-bold text-xs">Régler</button>` : '<span class="text-slate-400 font-bold">À jour</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openClientModal() { document.getElementById('m-client').classList.remove('hidden'); }
+        function closeClientModal() { document.getElementById('m-client').classList.add('hidden'); }
+
+        function saveClient() {
+            const name = document.getElementById('c-name').value.trim();
+            const phone = document.getElementById('c-phone').value.trim();
+            const street = document.getElementById('c-street').value.trim();
+            const address = document.getElementById('c-address').value.trim();
+            const zip = document.getElementById('c-zip').value.trim();
+            const ifu = document.getElementById('c-ifu').value.trim();
+            const rccm = document.getElementById('c-rccm').value.trim();
+            const taxdiv = document.getElementById('c-taxdiv').value.trim();
+
+            if (!name) { notify("Nom / Raison Sociale obligatoire !"); return; }
+
+            clients.push({
+                id: 'c' + Date.now(),
+                name, phone: phone || '-', street: street || '-', address: address || '-', zip: zip || '-', ifu: ifu || '-', rccm: rccm || '-', taxdiv: taxdiv || '-', debt: 0
+            });
+
+            saveState(); closeClientModal(); drawClients(); updateClientDropdown();
+            notify("Nouveau client créé avec succès !");
+        }
+
+        function payDebt(id) {
+            const c = clients.find(x => x.id === id);
+            if (!c) return;
+            const amount = parseFloat(prompt(`Règlement de dette pour ${c.name} (Max: ${c.debt} FCFA) :`, c.debt));
+            if (amount && amount > 0) {
+                c.debt = Math.max(0, c.debt - amount);
+                saveState(); drawClients(); updateClientDropdown();
+                notify("Paiement enregistré !");
+            }
+        }
+
+        function updateClientDropdown() {
+            const select = document.getElementById('cart-client-select');
+            select.innerHTML = '';
+            clients.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.innerText = c.name + (c.ifu && c.ifu !== '-' ? ` [IFU: ${c.ifu}]` : '') + (c.debt > 0 ? ` (Dette: ${c.debt} F)` : '');
+                select.appendChild(opt);
+            });
+        }
+
+        function drawQuotes() {
+            const tbody = document.getElementById('quotes-body');
+            tbody.innerHTML = '';
+            quotes.forEach(q => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-black text-slate-800">${q.id}</td>
+                    <td class="p-3 text-slate-500">${q.date}</td>
+                    <td class="p-3 font-bold text-slate-700">${q.client.name}</td>
+                    <td class="p-3 text-right font-black text-slate-900">${q.net.toLocaleString('fr-FR')} FCFA</td>
+                    <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-black ${q.status === 'Converti' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${q.status}</span></td>
+                    <td class="p-3 text-center space-x-1">
+                        <button type="button" onclick='printQuoteA4(${JSON.stringify(q)})' class="p-1 bg-slate-100 text-slate-700 rounded font-bold"><i class="fas fa-print"></i> Imprimer</button>
+                        ${q.status !== 'Converti' ? `<button type="button" onclick="convertQuoteToSale('${q.id}')" class="p-1 bg-emerald-600 text-white rounded font-bold"><i class="fas fa-check-double"></i> Convertir en Vente</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function drawHistory() {
+            const tbody = document.getElementById('history-body');
+            tbody.innerHTML = '';
+            let total = 0;
+
+            const filteredSales = (currentUser.role === 'caissiere') 
+                ? sales.filter(s => s.agentUsername === currentUser.username)
+                : sales;
+
+            document.getElementById('history-subtitle').innerText = (currentUser.role === 'caissiere') 
+                ? "Vos ventes uniquement (" + currentUser.fullname + ")" 
+                : "Toutes les transactions de l'équipe";
+
+            filteredSales.forEach(s => {
+                total += s.net;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-black text-slate-800">${s.id}</td>
+                    <td class="p-3 text-slate-500">${s.date}</td>
+                    <td class="p-3 font-bold text-blue-700">${s.agent || 'N/A'}</td>
+                    <td class="p-3 font-bold text-slate-700">${s.client.name}</td>
+                    <td class="p-3 font-bold text-indigo-700">${s.payMethod || 'Espèces'}</td>
+                    <td class="p-3 font-bold ${s.debt > 0 ? 'text-red-600' : 'text-emerald-600'}">${s.debt > 0 ? 'Crédit: ' + s.debt.toLocaleString('fr-FR') + ' F' : 'Comptant'}</td>
+                    <td class="p-3 text-right font-black text-slate-900">${s.net.toLocaleString('fr-FR')} FCFA</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('history-ca').innerText = total.toLocaleString('fr-FR') + ' FCFA';
+        }
+
+        function exportSalesCSV() {
+            let csv = 'Facture;Date;Agent;Client;ModePaiement;Total;Paye;Dette\n';
+            sales.forEach(s => {
+                csv += `${s.id};${s.date};${s.agent};${s.client.name};${s.payMethod || 'Espèces'};${s.net};${s.given};${s.debt}\n`;
+            });
+            downloadBlob(csv, 'historique_ventes.csv', 'text/csv');
+        }
+
+        function exportStockCSV() {
+            let csv = 'CodeBarres;Reference;Designation;PrixAchat;PrixVente;Stock\n';
+            items.forEach(i => {
+                csv += `${i.barcode};${i.ref};${i.name};${i.buy};${i.sell};${i.stock}\n`;
+            });
+            downloadBlob(csv, 'catalogue_stock.csv', 'text/csv');
+        }
+
+        function exportBackupJSON() {
+            const data = { users, items, clients, quotes, sales };
+            downloadBlob(JSON.stringify(data, null, 2), 'backup_mavoxjr_' + Date.now() + '.json', 'application/json');
+            notify("Sauvegarde de la base de données exportée !");
+        }
+
+        function importBackupJSON(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if (data.items && data.clients) {
+                        users = data.users || users;
+                        items = data.items || items;
+                        clients = data.clients || clients;
+                        quotes = data.quotes || quotes;
+                        sales = data.sales || sales;
+                        saveState();
+                        showView('pos');
+                        notify("Restauration réussie !");
+                    }
+                } catch(err) {
+                    notify("Fichier de sauvegarde invalide !");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadBlob(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function notify(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
+            setTimeout(function() { toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none'); }, 2500);
+        }
+    </script>
+</body>
+</html>
